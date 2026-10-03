@@ -65,6 +65,12 @@
     display: flex !important;
 }
 
+.animadex-config-wrap,
+[id^="animadex-reset-"],
+.animadex-import-result {
+    display: none !important;
+}
+
 .animadex-open .animadex-card {
     animation: animadex-enter 180ms ease-out both;
 }

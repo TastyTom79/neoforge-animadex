@@ -5,10 +5,13 @@ from __future__ import annotations
 from .client import Character
 
 
-def append_character(existing: str, character: Character, include_tags: bool) -> str:
+def append_character(
+    existing: str, character: Character, include_tags: bool,
+    skipped_tags: frozenset[str] = frozenset(),
+) -> str:
     incoming = [part.strip() for part in character.trigger.split(",") if part.strip()]
     if include_tags:
-        incoming.extend(character.tags)
+        incoming.extend(tag for tag in character.tags if tag.strip().casefold() not in skipped_tags)
 
     seen = {part.strip().casefold() for part in existing.split(",") if part.strip()}
     additions = []

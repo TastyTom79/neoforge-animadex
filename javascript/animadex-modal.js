@@ -8,9 +8,22 @@
         return field ? field.value.trim().toLowerCase() : null;
     }
 
+    function browserConfig(modal) {
+        const config = (modal || gradioApp()).querySelector(".animadex-config");
+        return {
+            visiblePresets: (config?.dataset.visiblePresets ?? "anima").split(",").map(value => value.trim()),
+            autoClose: config?.dataset.autoClose !== "false",
+            rememberSearch: config?.dataset.rememberSearch !== "false",
+        };
+    }
+
+    function presetIsVisible() {
+        return browserConfig().visiblePresets.includes(selectedPreset());
+    }
+
     function syncLaunchers() {
         const root = gradioApp();
-        const isAnima = selectedPreset() === "anima";
+        const isVisible = presetIsVisible();
 
         for (const prefix of prefixes) {
             const negativeRow = root.querySelector(`#${prefix}_neg_prompt_row`);
@@ -41,11 +54,11 @@
             if (launcherRow.previousElementSibling !== negativeRow) {
                 negativeRow.after(launcherRow);
             }
-            launcherRow.hidden = !isAnima;
-            launcher.hidden = !isAnima;
+            launcherRow.hidden = !isVisible;
+            launcher.hidden = !isVisible;
         }
 
-        if (!isAnima) closeModal();
+        if (!isVisible) closeModal();
     }
 
     function closeModal() {
@@ -53,12 +66,16 @@
         if (!open) return;
         open.classList.remove("animadex-open");
         open.setAttribute("aria-hidden", "true");
+        if (!browserConfig(open).rememberSearch) {
+            const reset = open.querySelector('[id^="animadex-reset-"]');
+            (reset?.matches("button") ? reset : reset?.querySelector("button"))?.click();
+        }
         if (returnFocus && returnFocus.isConnected) returnFocus.focus();
         returnFocus = null;
     }
 
     function openModal(launcher) {
-        if (selectedPreset() !== "anima") return;
+        if (!presetIsVisible()) return;
         const prefix = launcher.id.replace("animadex-launcher-", "");
         const modal = gradioApp().querySelector(`#animadex-modal-${prefix}`);
         if (!modal) return;
@@ -72,6 +89,13 @@
         const search = modal.querySelector("textarea, input");
         if (search) search.focus();
     }
+
+    window.animadexImportFinished = function (prefix, success) {
+        const modal = gradioApp().querySelector(`#animadex-modal-${prefix}`);
+        if (success && modal?.classList.contains("animadex-open") && browserConfig(modal).autoClose) {
+            closeModal();
+        }
+    };
 
     onUiLoaded(function () {
         const root = gradioApp();

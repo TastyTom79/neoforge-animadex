@@ -9,6 +9,7 @@ import gradio as gr
 
 from .client import AnimaDexError, Character, SearchPage, search_characters
 from .prompt import append_character
+from .settings import BrowserSettings
 
 
 def _selected(page: SearchPage | None, slug: str | None) -> Character | None:
@@ -83,19 +84,36 @@ def _previous(query: str, page: SearchPage | None):
     return _load(query, max(1, page.page - 1) if page else 1)
 
 
-def _import(prompt: str, slug: str | None, page: SearchPage | None, include_tags: bool):
+def _import(
+    prompt: str, slug: str | None, page: SearchPage | None,
+    include_tags: bool, skipped_tags: frozenset[str],
+):
     current = prompt or ""
     character = _selected(page, slug)
     if character is None:
-        return current, _status("Select a character first.", "error")
-    updated = append_character(current, character, include_tags)
+        return current, _status("Select a character first.", "error"), ""
+    updated = append_character(current, character, include_tags, skipped_tags)
     if updated == current:
-        return current, _status("Nothing new to add to the prompt.")
-    return updated, _status(f"Added {character.name} to the positive prompt.", "success")
+        return current, _status("Nothing new to add to the prompt."), ""
+    return updated, _status(f"Added {character.name} to the positive prompt.", "success"), "success"
 
 
-def build_panel(prompt_component, prefix: str) -> None:
+def _reset_browser():
+    return (
+        gr.update(value=""), gr.update(choices=[], value=None), None,
+        _detail(None, None), _status("Search to load characters."),
+    )
+
+
+def build_panel(prompt_component, prefix: str, settings: BrowserSettings) -> None:
     with gr.Group(elem_id=f"animadex-modal-{prefix}", elem_classes="animadex-modal"):
+        gr.HTML(
+            '<div class="animadex-config"'
+            f' data-visible-presets="{escape(",".join(settings.visible_presets), quote=True)}"'
+            f' data-auto-close="{str(settings.auto_close).lower()}"'
+            f' data-remember-search="{str(settings.remember_search).lower()}"></div>',
+            elem_classes="animadex-config-wrap",
+        )
         with gr.Group(elem_id=f"animadex-card-{prefix}", elem_classes="animadex-card"):
             with gr.Row(elem_classes="animadex-heading"):
                 gr.HTML(
@@ -119,9 +137,15 @@ def build_panel(prompt_component, prefix: str) -> None:
                     status = gr.HTML(_status("Search to load characters."), elem_classes="animadex-status-wrap")
                     following = gr.Button("Next", size="sm", scale=0, min_width=90)
             with gr.Row(elem_classes="animadex-actions"):
-                trigger_only = gr.Button("Add trigger")
-                trigger_tags = gr.Button("Add trigger + tags", variant="primary")
+                trigger_only = gr.Button(
+                    "Add trigger", variant="primary" if settings.preferred_import == "Trigger only" else "secondary",
+                )
+                trigger_tags = gr.Button(
+                    "Add trigger + tags", variant="primary" if settings.preferred_import == "Trigger + tags" else "secondary",
+                )
             page_state = gr.State(value=None)
+            import_result = gr.Textbox(value="", show_label=False, interactive=False, elem_classes="animadex-import-result")
+            reset = gr.Button("Reset browser", elem_id=f"animadex-reset-{prefix}", elem_classes="animadex-reset")
 
             for button, loader, inputs in (
                 (search, lambda text: _load(text, 1), [query]),
@@ -135,13 +159,24 @@ def build_panel(prompt_component, prefix: str) -> None:
                 _detail, inputs=[results, page_state], outputs=detail, show_progress="hidden"
             )
             results.change(_detail, inputs=[results, page_state], outputs=detail, show_progress="hidden")
-            trigger_only.click(
-                lambda prompt, slug, page: _import(prompt, slug, page, False),
-                inputs=[prompt_component, results, page_state], outputs=[prompt_component, status],
-                show_progress="minimal",
-            )
-            trigger_tags.click(
-                lambda prompt, slug, page: _import(prompt, slug, page, True),
-                inputs=[prompt_component, results, page_state], outputs=[prompt_component, status],
-                show_progress="minimal",
+
+            def import_handler(include_tags: bool):
+                def run(prompt: str, slug: str | None, page: SearchPage | None):
+                    return _import(prompt, slug, page, include_tags, settings.skipped_tags)
+
+                return run
+
+            for button, include_tags in ((trigger_only, False), (trigger_tags, True)):
+                button.click(
+                    import_handler(include_tags),
+                    inputs=[prompt_component, results, page_state],
+                    outputs=[prompt_component, status, import_result],
+                    show_progress="minimal",
+                ).then(
+                    fn=None, inputs=[import_result], outputs=[],
+                    _js=f"(result) => window.animadexImportFinished('{prefix}', result === 'success')",
+                )
+            reset.click(
+                _reset_browser, inputs=[], outputs=[query, results, page_state, detail, status],
+                queue=False, show_progress="hidden",
             )

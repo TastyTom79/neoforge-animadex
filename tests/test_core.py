@@ -2,6 +2,7 @@ import unittest
 
 from animadex_ext.client import AnimaDexError, Character, parse_search_page
 from animadex_ext.prompt import append_character
+from animadex_ext.settings import read_settings
 
 
 class SearchParsingTests(unittest.TestCase):
@@ -53,6 +54,35 @@ class PromptImportTests(unittest.TestCase):
         tags_only = Character("x", "X", "", "", ("blue hair", "1girl"), "")
         self.assertEqual(append_character("", tags_only, False), "")
         self.assertEqual(append_character("", tags_only, True), "blue hair, 1girl")
+
+    def test_skipped_tags_leave_trigger_and_remaining_tag_order_intact(self):
+        self.assertEqual(
+            append_character("", self.character, True, frozenset({"1girl", "witch hat", "megumin"})),
+            "megumin, konosuba, red eyes",
+        )
+
+
+class BrowserSettingsTests(unittest.TestCase):
+    def test_defaults_are_anima_only(self):
+        settings = read_settings(object())
+        self.assertEqual(settings.visible_presets, ("anima",))
+        self.assertTrue(settings.auto_close)
+        self.assertTrue(settings.remember_search)
+
+    def test_additional_presets_and_skipped_tags(self):
+        class Options:
+            animadex_visible_presets = ["anima", " Krea "]
+            animadex_skipped_tags = " 1girl, Blue Eyes, 1GIRL "
+            animadex_preferred_import = "Trigger only"
+            animadex_auto_close = False
+            animadex_remember_search = False
+
+        settings = read_settings(Options())
+        self.assertEqual(settings.visible_presets, ("anima", "krea"))
+        self.assertEqual(settings.skipped_tags, frozenset({"1girl", "blue eyes"}))
+        self.assertEqual(settings.preferred_import, "Trigger only")
+        self.assertFalse(settings.auto_close)
+        self.assertFalse(settings.remember_search)
 
 
 if __name__ == "__main__":
