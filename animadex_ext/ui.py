@@ -70,41 +70,46 @@ def _import(prompt: str, slug: str | None, page: SearchPage | None, include_tags
     return updated, f"Added {character.name} to the positive prompt."
 
 
-def build_panel(prompt_component) -> None:
-    with gr.Accordion("AnimaDex characters", open=False):
-        with gr.Row():
-            query = gr.Textbox(label="Search characters", placeholder="Name, series, or tags", scale=4)
-            search = gr.Button("Search", scale=1)
-        with gr.Row():
-            previous = gr.Button("Previous", size="sm")
-            following = gr.Button("Next", size="sm")
-        results = gr.Dropdown(label="Characters", choices=[], interactive=True)
-        detail = gr.HTML("<p>Search AnimaDex to browse characters.</p>")
-        with gr.Row():
-            trigger_only = gr.Button("Add trigger")
-            trigger_tags = gr.Button("Add trigger + tags", variant="primary")
-        status = gr.Textbox(label="Status", value="Search to load characters.", interactive=False)
-        page_state = gr.State(value=None)
+def build_panel(prompt_component, prefix: str) -> None:
+    gr.Button("Browse AnimaDex", elem_id=f"animadex-open-{prefix}")
+    with gr.Group(elem_id=f"animadex-modal-{prefix}", elem_classes="animadex-modal"):
+        with gr.Group(elem_id=f"animadex-card-{prefix}", elem_classes="animadex-card"):
+            with gr.Row(elem_classes="animadex-heading"):
+                gr.Markdown("### AnimaDex characters")
+                gr.Button("Close ✕", size="sm", elem_id=f"animadex-close-{prefix}")
+            with gr.Row():
+                query = gr.Textbox(label="Search characters", placeholder="Name, series, or tags", scale=4)
+                search = gr.Button("Search", scale=1)
+            with gr.Row():
+                previous = gr.Button("Previous", size="sm")
+                following = gr.Button("Next", size="sm")
+            results = gr.Dropdown(label="Characters", choices=[], interactive=True)
+            detail = gr.HTML("<p>Search AnimaDex to browse characters.</p>")
+            with gr.Row():
+                trigger_only = gr.Button("Add trigger")
+                trigger_tags = gr.Button("Add trigger + tags", variant="primary")
+            status = gr.Textbox(label="Status", value="Search to load characters.", interactive=False)
+            page_state = gr.State(value=None)
 
-        for button, loader, inputs in (
-            (search, lambda text: _load(text, 1), [query]),
-            (previous, _previous, [query, page_state]),
-            (following, _next, [query, page_state]),
-        ):
-            button.click(loader, inputs=inputs, outputs=[results, page_state, status], show_progress="minimal").then(
+            for button, loader, inputs in (
+                (search, lambda text: _load(text, 1), [query]),
+                (previous, _previous, [query, page_state]),
+                (following, _next, [query, page_state]),
+            ):
+                button.click(loader, inputs=inputs, outputs=[results, page_state, status], show_progress="minimal").then(
+                    _detail, inputs=[results, page_state], outputs=detail, show_progress="hidden"
+                )
+            query.submit(lambda text: _load(text, 1), inputs=query, outputs=[results, page_state, status], show_progress="minimal").then(
                 _detail, inputs=[results, page_state], outputs=detail, show_progress="hidden"
             )
-        query.submit(lambda text: _load(text, 1), inputs=query, outputs=[results, page_state, status], show_progress="minimal").then(
-            _detail, inputs=[results, page_state], outputs=detail, show_progress="hidden"
-        )
-        results.change(_detail, inputs=[results, page_state], outputs=detail, show_progress="hidden")
-        trigger_only.click(
-            lambda prompt, slug, page: _import(prompt, slug, page, False),
-            inputs=[prompt_component, results, page_state], outputs=[prompt_component, status],
-            show_progress="minimal",
-        )
-        trigger_tags.click(
-            lambda prompt, slug, page: _import(prompt, slug, page, True),
-            inputs=[prompt_component, results, page_state], outputs=[prompt_component, status],
-            show_progress="minimal",
-        )
+            results.change(_detail, inputs=[results, page_state], outputs=detail, show_progress="hidden")
+            trigger_only.click(
+                lambda prompt, slug, page: _import(prompt, slug, page, False),
+                inputs=[prompt_component, results, page_state], outputs=[prompt_component, status],
+                show_progress="minimal",
+            )
+            trigger_tags.click(
+                lambda prompt, slug, page: _import(prompt, slug, page, True),
+                inputs=[prompt_component, results, page_state], outputs=[prompt_component, status],
+                show_progress="minimal",
+            )

@@ -25,7 +25,7 @@ class Script(scripts.Script):
         prefix = "img2img" if is_img2img else "txt2img"
         prompt = PROMPTS.get(f"{prefix}_prompt")
         if prompt is not None:
-            build_panel(prompt)
+            build_panel(prompt, prefix)
         return []
 
 
