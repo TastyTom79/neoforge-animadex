@@ -15,11 +15,17 @@
         for (const prefix of prefixes) {
             const negativeRow = root.querySelector(`#${prefix}_neg_prompt_row`);
             const modal = root.querySelector(`#animadex-modal-${prefix}`);
+            let launcherRow = root.querySelector(`#animadex-launcher-row-${prefix}`);
             let launcher = root.querySelector(`#animadex-launcher-${prefix}`);
 
             if (!negativeRow || !modal) {
-                if (launcher) launcher.remove();
+                if (launcherRow) launcherRow.remove();
                 continue;
+            }
+            if (!launcherRow) {
+                launcherRow = document.createElement("div");
+                launcherRow.id = `animadex-launcher-row-${prefix}`;
+                launcherRow.className = "animadex-launcher-row";
             }
             if (!launcher) {
                 launcher = document.createElement("button");
@@ -29,9 +35,13 @@
                 launcher.textContent = "Browse AnimaDex";
                 launcher.hidden = true;
             }
-            if (launcher.previousElementSibling !== negativeRow) {
-                negativeRow.after(launcher);
+            if (launcher.parentElement !== launcherRow) {
+                launcherRow.append(launcher);
             }
+            if (launcherRow.previousElementSibling !== negativeRow) {
+                negativeRow.after(launcherRow);
+            }
+            launcherRow.hidden = !isAnima;
             launcher.hidden = !isAnima;
         }
 
@@ -80,6 +90,7 @@
         for (const eventName of ["input", "change"]) {
             root.addEventListener(eventName, function (event) {
                 if (event.target instanceof Element && event.target.closest("#forge_ui_preset")) {
+                    syncLaunchers();
                     requestAnimationFrame(syncLaunchers);
                 }
             });

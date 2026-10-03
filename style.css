@@ -1,27 +1,47 @@
-.animadex-prompt-launcher {
-    width: fit-content;
-    min-width: 174px;
-    align-self: flex-start;
+.animadex-launcher-row {
+    display: flex !important;
+    width: 100%;
+    justify-content: flex-start;
     margin: 4px 0 6px;
-    padding: 8px 14px;
-    border: 1px solid rgba(249, 115, 22, 0.55) !important;
-    border-radius: 10px !important;
-    background: linear-gradient(135deg, rgba(249, 115, 22, 0.18), rgba(249, 115, 22, 0.04)) !important;
-    color: var(--body-text-color, #f4f6fa);
-    font: inherit;
-    font-weight: 650 !important;
-    cursor: pointer;
-    transition: border-color 150ms ease, transform 150ms ease, box-shadow 150ms ease;
 }
 
-.animadex-prompt-launcher[hidden] {
+.animadex-launcher-row[hidden] {
     display: none !important;
 }
 
-.animadex-prompt-launcher:hover {
-    border-color: #fb923c !important;
-    box-shadow: 0 4px 18px rgba(249, 115, 22, 0.16);
-    transform: translateY(-1px);
+.animadex-launcher-row .animadex-prompt-launcher {
+    display: inline-flex !important;
+    flex: 0 0 auto !important;
+    align-items: center;
+    justify-content: center;
+    width: auto !important;
+    max-width: max-content !important;
+    min-width: 0 !important;
+    height: 38px !important;
+    min-height: 38px !important;
+    margin: 0 !important;
+    padding: 0 14px !important;
+    border: 1px solid var(--button-secondary-border-color, var(--border-color-primary, #4b5563)) !important;
+    border-radius: var(--button-large-radius, 8px) !important;
+    background: var(--button-secondary-background-fill, #374151) !important;
+    color: var(--button-secondary-text-color, var(--body-text-color, #f4f6fa)) !important;
+    box-shadow: var(--button-shadow, none) !important;
+    font: inherit;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    line-height: 1 !important;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background-color 150ms ease, border-color 150ms ease;
+}
+
+.animadex-launcher-row .animadex-prompt-launcher[hidden] {
+    display: none !important;
+}
+
+.animadex-launcher-row .animadex-prompt-launcher:hover {
+    border-color: var(--button-secondary-border-color-hover, var(--border-color-primary, #6b7280)) !important;
+    background: var(--button-secondary-background-fill-hover, #4b5563) !important;
 }
 
 .animadex-modal {
